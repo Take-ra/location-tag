@@ -5,17 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Location Tag - AR</title>
     
-    <!-- A-Frame (1.3.0) -->
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-    <!-- AR.js (Location-based) -->
     <script type="text/javascript" src="https://raw.githack.com/AR-js-org/AR.js/master/three.js/build/ar-threex-location-only.js"></script>
     <script type="text/javascript" src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    <!-- Look-at component -->
     <script src="https://unpkg.com/aframe-look-at-component@0.8.0/dist/aframe-look-at-component.min.js"></script>
 
     <style>
         :root {
-            --primary-color: #E8A5B3; /* サクラピンク */
+            --primary-color: #E8A5B3;
             --bg-glass: rgba(255, 255, 255, 0.85);
             --nav-height: 65px;
         }
@@ -24,20 +21,35 @@
             margin: 0;
             overflow: hidden;
             font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
-            background-color: #000; /* カメラ起動前の背景 */
+            background-color: #000;
         }
 
-        /* 共通のグラスモーフィズム設定 */
+        /* 🔴 バグ修正: iOS/Safariでカメラ上に勝手に出る「再生・停止ボタン」を強制非表示 */
+        video {
+            pointer-events: none !important; /* ビデオへの誤タッチを防ぐ */
+        }
+        video::-webkit-media-controls,
+        video::-webkit-media-controls-play-button,
+        video::-webkit-media-controls-start-playback-button,
+        video::-webkit-media-controls-overlay-play-button {
+            display: none !important;
+            -webkit-appearance: none !important;
+        }
+
+        /* A-Frameが勝手に出す不要なVR/ARボタンを強制非表示 */
+        .a-enter-vr, .a-enter-ar {
+            display: none !important;
+        }
+
         .glass-panel {
             background: var(--bg-glass);
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
         }
 
-        /* --- AR入力UI --- */
         #ar-input-container {
             position: fixed;
-            bottom: calc(var(--nav-height) + 15px); /* ナビバーの上に配置 */
+            bottom: calc(var(--nav-height) + 15px);
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
@@ -77,20 +89,19 @@
 
         #save-btn:active { transform: scale(0.95); }
 
-        /* --- 思い出一覧画面（オーバーレイ） --- */
         #list-view {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: calc(100vh - var(--nav-height));
-            background: rgba(250, 245, 246, 0.95); /* ほんのりピンクがかった白 */
+            background: rgba(250, 245, 246, 0.95);
             z-index: 1500;
-            display: none; /* 初期は非表示 */
+            display: none;
             overflow-y: auto;
             padding: 20px;
             box-sizing: border-box;
-            padding-top: env(safe-area-inset-top); /* iPhoneノッチ対応 */
+            padding-top: env(safe-area-inset-top);
         }
 
         .list-header {
@@ -141,7 +152,6 @@
             justify-content: center;
         }
 
-        /* --- ボトムナビゲーション --- */
         #bottom-nav {
             position: fixed;
             bottom: 0;
@@ -177,7 +187,6 @@
 </head>
 <body>
 
-    <!-- AR空間 (常に背後で稼働) -->
     <a-scene
         vr-mode-ui="enabled: false"
         embedded
@@ -185,21 +194,16 @@
         <a-camera gps-camera rotation-reader></a-camera>
     </a-scene>
 
-    <!-- AR画面用 入力UI -->
     <div id="ar-input-container" class="glass-panel">
         <input type="text" id="tag-input" placeholder="この場所に思い出をTag付け...">
         <button id="save-btn">Tagを残す</button>
     </div>
 
-    <!-- 思い出一覧画面 (オーバーレイ) -->
     <div id="list-view">
         <div class="list-header">Taichiさんの思い出一覧</div>
-        <div id="memory-list-container">
-            <!-- JavaScriptでカードが動的に生成されます -->
-        </div>
+        <div id="memory-list-container"></div>
     </div>
 
-    <!-- ボトムナビゲーション -->
     <nav id="bottom-nav" class="glass-panel">
         <div class="nav-item active" id="nav-ar">
             <span class="nav-icon">📷</span>
@@ -216,17 +220,21 @@
             const scene = document.querySelector('a-scene');
             const saveBtn = document.getElementById('save-btn');
             const tagInput = document.getElementById('tag-input');
-            
-            // UI制御用の要素
             const navAr = document.getElementById('nav-ar');
             const navList = document.getElementById('nav-list');
             const arInputContainer = document.getElementById('ar-input-container');
             const listView = document.getElementById('list-view');
             const memoryListContainer = document.getElementById('memory-list-container');
-
             const STORAGE_KEY = 'locationTags';
 
-            // --- 画面切り替えロジック ---
+            // 🔴 バグ修正: 画面タップ時にカメラが停止していれば強制再生する（再生ボタン対策）
+            document.body.addEventListener('click', () => {
+                const video = document.querySelector('video');
+                if (video && video.paused) {
+                    video.play().catch(e => console.log('ビデオ再生エラー:', e));
+                }
+            });
+
             navAr.addEventListener('click', () => {
                 navAr.classList.add('active');
                 navList.classList.remove('active');
@@ -239,14 +247,13 @@
                 navAr.classList.remove('active');
                 arInputContainer.style.display = 'none';
                 listView.style.display = 'block';
-                renderMemoryList(); // 開くたびにリストを更新
+                renderMemoryList();
             });
 
-            // --- ARオブジェクト生成関数 ---
             function createARElement(tag) {
                 const entity = document.createElement('a-entity');
                 entity.setAttribute('gps-entity-place', `latitude: ${tag.lat}; longitude: ${tag.lon};`);
-                entity.setAttribute('id', `ar-${tag.id}`); // 削除用にIDを付与
+                entity.setAttribute('id', `ar-${tag.id}`);
 
                 const sphere = document.createElement('a-sphere');
                 sphere.setAttribute('radius', '0.5');
@@ -257,21 +264,25 @@
 
                 const text = document.createElement('a-text');
                 text.setAttribute('value', tag.text);
-                text.setAttribute('font', 'https://raw.githubusercontent.com/etiennepinchon/aframe-fonts/master/fonts/notosansjapanese/NotoSansJapanese-Bold.json');
+                
+                // 🔴 バグ修正: CDN経由の安定した日本語フォントに変更
+                text.setAttribute('font', 'https://cdn.jsdelivr.net/gh/etiennepinchon/aframe-fonts@master/fonts/notosanscjkjp/NotoSansCJKjp-Bold.json');
                 text.setAttribute('shader', 'msdf');
                 text.setAttribute('color', '#FFFFFF');
                 text.setAttribute('align', 'center');
-                text.setAttribute('scale', '3 3 3');
+                text.setAttribute('scale', '4 4 4'); // 少し大きく調整
                 text.setAttribute('position', '0 2.5 0');
                 text.setAttribute('look-at', '[gps-camera]');
+                
+                // 🔴 バグ修正: 背景パネル設定。z-offsetで文字を少しだけ手前に出して埋もれを防ぐ
                 text.setAttribute('geometry', 'primitive: plane; height: auto; width: auto');
                 text.setAttribute('material', 'color: #333333; opacity: 0.6; shader: flat');
+                text.setAttribute('z-offset', '0.05'); 
+                
                 entity.appendChild(text);
-
                 scene.appendChild(entity);
             }
 
-            // --- 思い出一覧の描画関数 ---
             function renderMemoryList() {
                 memoryListContainer.innerHTML = '';
                 const savedTags = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -281,11 +292,9 @@
                     return;
                 }
 
-                // 新しい順に並び替えて表示
                 savedTags.reverse().forEach(tag => {
                     const card = document.createElement('div');
                     card.className = 'memory-card';
-                    
                     card.innerHTML = `
                         <p class="memory-text">${tag.text}</p>
                         <p class="memory-location">📍 ${tag.lat.toFixed(5)}, ${tag.lon.toFixed(5)}</p>
@@ -294,7 +303,6 @@
                     memoryListContainer.appendChild(card);
                 });
 
-                // 削除ボタンのイベント設定
                 document.querySelectorAll('.delete-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const idToDelete = parseInt(e.target.getAttribute('data-id'));
@@ -305,24 +313,18 @@
                 });
             }
 
-            // --- 思い出の削除処理 ---
             function deleteMemory(id) {
-                // localStorageから削除
                 let savedTags = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
                 savedTags = savedTags.filter(tag => tag.id !== id);
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(savedTags));
 
-                // AR空間上のオブジェクトを削除
                 const arEntity = document.getElementById(`ar-${id}`);
                 if (arEntity) {
                     arEntity.parentNode.removeChild(arEntity);
                 }
-
-                // リストを再描画
                 renderMemoryList();
             }
 
-            // --- 初期ロード処理 ---
             scene.addEventListener('loaded', () => {
                 const savedTags = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
                 savedTags.forEach(tag => {
@@ -330,7 +332,6 @@
                 });
             });
 
-            // --- Tagを残す（保存）処理 ---
             saveBtn.addEventListener('click', () => {
                 const textVal = tagInput.value.trim();
                 
@@ -350,15 +351,12 @@
                     (position) => {
                         const lat = position.coords.latitude;
                         const lon = position.coords.longitude;
-                        
-                        // 管理用の一意のIDとして現在時刻のタイムスタンプを付与
                         const newTag = { id: Date.now(), lat: lat, lon: lon, text: textVal };
                         
                         const savedTags = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
                         savedTags.push(newTag);
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(savedTags));
 
-                        // 即座にAR追加
                         createARElement(newTag);
 
                         tagInput.value = '';
