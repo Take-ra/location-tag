@@ -3,10 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <title>Location Tag Prototype</title>
-    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    <script src="https://unpkg.com/aframe-look-at-component@0.8.0/dist/aframe-look-at-component.min.js"></script>
-
     <style>
       /* 登録用UIのスタイリング */
       #ui-container {
@@ -15,18 +13,18 @@
         left: 50%;
         transform: translateX(-50%);
         z-index: 9999;
-        background: rgba(255, 255, 255, 0.9);
+        background: rgba(255, 255, 255, 0.95);
         padding: 15px;
         border-radius: 15px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         display: flex;
         gap: 10px;
-        width: 80%;
+        width: 85%;
         max-width: 400px;
       }
       #tag-input {
         flex: 1;
-        padding: 8px;
+        padding: 10px;
         border: 1px solid #ccc;
         border-radius: 8px;
         font-size: 14px;
@@ -35,22 +33,10 @@
         background: #E8A5B3;
         color: white;
         border: none;
-        padding: 8px 15px;
+        padding: 10px 15px;
         border-radius: 8px;
         font-weight: bold;
         cursor: pointer;
-      }
-      /* AR内に表示する日本語テキストの看板スタイル */
-      .ar-html-tag {
-        background: rgba(255, 255, 255, 0.9);
-        color: #2D2D2D;
-        font-family: Arial, sans-serif;
-        font-size: 24px;
-        font-weight: bold;
-        padding: 15px;
-        border-radius: 10px;
-        border: 3px solid #E8A5B3;
-        white-space: nowrap;
       }
     </style>
   </head>
@@ -61,46 +47,49 @@
       <button id="save-btn" onclick="saveTag()">Tagを残す</button>
     </div>
 
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true;">
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: false">
       
-      <a-assets>
-        <div id="html-target" class="ar-html-tag">ここに思い出が表示されます</div>
-      </a-assets>
-
       <a-marker preset="hiro" id="marker">
-        
-        <a-entity 
+        <a-text 
           id="tag-board"
+          value="Loading..." 
           position="0 1.2 0" 
-          scale="3 3 3"
-          text="value: Loading...; align: center; color: #2D2D2D; font: https://cdn.aframe.io/fonts/A-Frame-Min-Bold.json; shader: msdf;"
-          look-at="[camera]">
-        </a-entity>
+          scale="1.5 1.5 1.5"
+          color="#2D2D2D"
+          align="center"
+          font="https://raw.githubusercontent.com/etiennepinchon/aframe-fonts/master/fonts/notosansjapanese/NotoSansJapanese-Bold.json"
+          shader="msdf"
+          bg-color="#FFF">
+        </a-text>
 
         <a-sphere position="0 0.3 0" radius="0.3" color="#E8A5B3" opacity="0.6"></a-sphere>
-        
       </a-marker>
 
       <a-entity camera></a-entity>
     </a-scene>
 
     <script>
-      // 英語のテキストフォントでも表示をバグらせないための多言語マッピング関数
-      function updateARText(text) {
+      // ARのテキストを安全に書き換える関数
+      function applyTextToAR(text) {
         const tagBoard = document.getElementById('tag-board');
-        // 日本語を一時的に表示できるように、ブラウザ標準のダイアログでも補助しつつ、ボードに反映
-        tagBoard.setAttribute('text', 'value', text);
+        if (tagBoard) {
+          tagBoard.setAttribute('value', text);
+        }
       }
 
-      window.onload = function() {
-        const savedText = localStorage.getItem('location_tag_memory');
-        if (savedText) {
-          updateARText(savedText);
-        } else {
-          updateARText("No Tag Here");
-        }
-      };
+      // A-Frameのシステムが完全に立ち上がってから記憶を読み込む（消えるバグ対策）
+      document.querySelector('a-scene').addEventListener('loaded', function () {
+        setTimeout(function() {
+          const savedText = localStorage.getItem('location_tag_memory');
+          if (savedText) {
+            applyTextToAR(savedText);
+          } else {
+            applyTextToAR("ここにTagを表示します");
+          }
+        }, 500); // 0.5秒だけ待って確実に描画させる
+      });
 
+      // 「Tagを残す」ボタンを押したときの処理
       function saveTag() {
         const inputField = document.getElementById('tag-input');
         const text = inputField.value;
@@ -110,9 +99,13 @@
           return;
         }
 
+        // 1. スマホのブラウザに記憶を永続保存（これで再読み込みしても消えない）
         localStorage.setItem('location_tag_memory', text);
-        updateARText(text);
         
+        // 2. AR空間の文字を安全に上書き（フリーズ対策）
+        applyTextToAR(text);
+        
+        // 3. 入力欄をクリアして通知
         inputField.value = "";
         alert("この場所にTagをピン留めしました！");
       }
