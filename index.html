@@ -1,32 +1,123 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>MemoryTag Prototype</title>
+    <title>Location Tag Prototype</title>
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <style>
+      /* 登録用UIのスタイリング */
+      #ui-container {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 15px;
+        border-radius: 15px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        display: flex;
+        gap: 10px;
+        width: 80%;
+        max-width: 400px;
+      }
+      #tag-input {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        font-size: 14px;
+      }
+      #save-btn {
+        background: #E8A5B3;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      /* AR内に表示する日本語テキストの看板スタイル */
+      .ar-html-tag {
+        background: rgba(255, 255, 255, 0.9);
+        color: #2D2D2D;
+        font-family: Arial, sans-serif;
+        font-size: 24px;
+        font-weight: bold;
+        padding: 15px;
+        border-radius: 10px;
+        border: 3px solid #E8A5B3;
+        white-space: nowrap;
+      }
+    </style>
   </head>
-  <body style="margin: 0; overflow: hidden">
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
-      <a-marker preset="hiro">
-        <a-text
-          value="I survived the all-nighter here! - Taichi"
-          position="0 1 0"
-          scale="1.5 1.5 1.5"
-          color="#FFD700"
-          align="center"
-        >
-        </a-text>
+  <body style="margin: 0; overflow: hidden;">
 
-        <a-sphere
-          position="0 0.3 0"
-          radius="0.3"
-          color="#4CC3D9"
-          opacity="0.7"
-        ></a-sphere>
+    <div id="ui-container">
+      <input type="text" id="tag-input" placeholder="この場所に思い出をTag付け...">
+      <button id="save-btn" onclick="saveTag()">Tagを残す</button>
+    </div>
+
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+      
+      <a-assets>
+        <div id="html-target" class="ar-html-tag">ここに思い出が表示されます</div>
+      </a-assets>
+
+      <a-marker preset="hiro" id="marker">
+        
+        <a-entity 
+          id="tag-board"
+          position="0 1.2 0" 
+          scale="2 2 2"
+          geometry="primitive: plane; width: auto; height: auto;"
+          material="shader: html; target: #html-target; transparent: true; opacity: 0.9;"
+          look-at="[camera]">
+        </a-entity>
+
+        <a-sphere position="0 0.3 0" radius="0.3" color="#E8A5B3" opacity="0.6"></a-sphere>
+        
       </a-marker>
 
       <a-entity camera></a-entity>
     </a-scene>
+
+    <script>
+      // ページが読み込まれたら、ブラウザに記憶されているTagがあるか確認
+      window.onload = function() {
+        const savedText = localStorage.getItem('location_tag_memory');
+        const htmlTarget = document.getElementById('html-target');
+        
+        if (savedText) {
+          htmlTarget.innerHTML = savedText;
+        } else {
+          htmlTarget.innerHTML = "まだTagがありません。下から登録してね！";
+        }
+      };
+
+      // 「Tagを残す」ボタンを押したときの処理（記憶させる）
+      function saveTag() {
+        const inputField = document.getElementById('tag-input');
+        const text = inputField.value;
+        
+        if (text.trim() === "") {
+          alert("思い出の言葉を入力してください！");
+          return;
+        }
+
+        // 1. スマホ（ブラウザ）のメモリに永続保存
+        localStorage.setItem('location_tag_memory', text);
+        
+        // 2. 画面上のAR看板の文字を書き換える
+        document.getElementById('html-target').innerHTML = text;
+        
+        // 3. 入力欄をクリアして通知
+        inputField.value = "";
+        alert("この場所にTagをピン留めしました！");
+      }
+    </script>
+    
+    <script src="https://raw.githack.com/templates-githack/aframe-html-shader/master/dist/aframe-html-shader.min.js"></script>
   </body>
 </html>
