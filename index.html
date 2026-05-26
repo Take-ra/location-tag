@@ -3,11 +3,10 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Location Tag - AR</title>
+    <title>Location Tag - Demo</title>
     
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-    <script type="text/javascript" src="https://raw.githack.com/AR-js-org/AR.js/master/three.js/build/ar-threex-location-only.js"></script>
-    <script type="text/javascript" src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://unpkg.com/aframe-look-at-component@0.8.0/dist/aframe-look-at-component.min.js"></script>
 
     <style>
         :root {
@@ -23,24 +22,13 @@
             background-color: #000;
         }
 
-        /* カメラ映像のフリーズ・再生ボタン対策 */
-        video {
-            pointer-events: none !important;
-        }
-        video::-webkit-media-controls {
-            display: none !important;
-        }
-
-        .a-enter-vr, .a-enter-ar {
-            display: none !important;
-        }
-
         .glass-panel {
             background: var(--bg-glass);
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
         }
 
+        /* AR画面用 入力UI */
         #ar-input-container {
             position: fixed;
             bottom: calc(var(--nav-height) + 15px);
@@ -80,11 +68,7 @@
             white-space: nowrap;
         }
 
-        #save-btn:disabled {
-            background-color: #ccc;
-            box-shadow: none;
-        }
-
+        /* 一覧画面 */
         #list-view {
             position: fixed;
             top: 0;
@@ -115,7 +99,6 @@
             margin-bottom: 15px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             border-left: 6px solid var(--primary-color);
-            position: relative;
         }
 
         .memory-text {
@@ -131,19 +114,7 @@
             margin: 0;
         }
 
-        .delete-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: #f0f0f0;
-            border: none;
-            color: #888;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            cursor: pointer;
-        }
-
+        /* ボトムナビ */
         #bottom-nav {
             position: fixed;
             bottom: 0;
@@ -178,11 +149,33 @@
 </head>
 <body>
 
-    <a-scene
-        vr-mode-ui="enabled: false"
-        embedded
-        arjs="sourceType: webcam; debugUIEnabled: false;">
-        <a-camera gps-camera="minDistance: 1; maxDistance: 1000;" rotation-reader></a-camera>
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: false">
+        
+        <a-entity position="-1.5 0.5 -3">
+            <a-sphere radius="0.4" color="#E8A5B3" opacity="0.7"></a-sphere>
+            <a-text value="初めてのオーストラリア留学！" 
+                    font="https://cdn.jsdelivr.net/gh/etiennepinchon/aframe-fonts@master/fonts/notosanscjkjp/NotoSansCJKjp-Bold.json"
+                    shader="msdf" color="#FFFFFF" align="center" scale="2 2 2" position="0 0.8 0" look-at="[camera]"
+                    geometry="primitive: plane; height: auto; width: auto" material="color: #333333; opacity: 0.7; shader: flat" z-offset="0.05"></a-text>
+        </a-entity>
+
+        <a-entity position="0 0 -2">
+            <a-sphere radius="0.4" color="#E8A5B3" opacity="0.7"></a-sphere>
+            <a-text value="ここで友達と遅くまで語り合った場所" 
+                    font="https://cdn.jsdelivr.net/gh/etiennepinchon/aframe-fonts@master/fonts/notosanscjkjp/NotoSansCJKjp-Bold.json"
+                    shader="msdf" color="#FFFFFF" align="center" scale="2 2 2" position="0 0.8 0" look-at="[camera]"
+                    geometry="primitive: plane; height: auto; width: auto" material="color: #333333; opacity: 0.7; shader: flat" z-offset="0.05"></a-text>
+        </a-entity>
+
+        <a-entity position="2 0.8 -4">
+            <a-sphere radius="0.4" color="#E8A5B3" opacity="0.7"></a-sphere>
+            <a-text value="大会で優勝した思い出のコート！" 
+                    font="https://cdn.jsdelivr.net/gh/etiennepinchon/aframe-fonts@master/fonts/notosanscjkjp/NotoSansCJKjp-Bold.json"
+                    shader="msdf" color="#FFFFFF" align="center" scale="2 2 2" position="0 0.8 0" look-at="[camera]"
+                    geometry="primitive: plane; height: auto; width: auto" material="color: #333333; opacity: 0.7; shader: flat" z-offset="0.05"></a-text>
+        </a-entity>
+
+        <a-camera id="camera" rotation-reader></a-camera>
     </a-scene>
 
     <div id="ar-input-container" class="glass-panel">
@@ -192,7 +185,20 @@
 
     <div id="list-view">
         <div class="list-header">Taichiさんの思い出一覧</div>
-        <div id="memory-list-container"></div>
+        <div id="memory-list-container">
+            <div class="memory-card">
+                <p class="memory-text">大会で優勝した思い出のコート！</p>
+                <p class="memory-location">📍 41.80123, 140.75612</p>
+            </div>
+            <div class="memory-card">
+                <p class="memory-text">ここで友達と遅くまで語り合った場所</p>
+                <p class="memory-location">📍 41.80055, 140.75543</p>
+            </div>
+            <div class="memory-card">
+                <p class="memory-text">初めてのオーストラリア留学！</p>
+                <p class="memory-location">📍 -28.00231, 153.41452</p>
+            </div>
+        </div>
     </div>
 
     <nav id="bottom-nav" class="glass-panel">
@@ -208,24 +214,20 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const scene = document.querySelector('a-scene');
             const saveBtn = document.getElementById('save-btn');
             const tagInput = document.getElementById('tag-input');
             const navAr = document.getElementById('nav-ar');
             const navList = document.getElementById('nav-list');
             const arInputContainer = document.getElementById('ar-input-container');
             const listView = document.getElementById('list-view');
-            const memoryListContainer = document.getElementById('memory-list-container');
-            const STORAGE_KEY = 'locationTags';
+            const scene = document.querySelector('a-scene');
 
-            // 画面切り替え
+            // タブ切り替え
             navAr.addEventListener('click', () => {
                 navAr.classList.add('active');
                 navList.classList.remove('active');
                 listView.style.display = 'none';
                 arInputContainer.style.display = 'flex';
-                // 切り替え時にカメラ映像の強制再開処理
-                refreshCamera();
             });
 
             navList.addEventListener('click', () => {
@@ -233,149 +235,56 @@
                 navAr.classList.remove('active');
                 arInputContainer.style.display = 'none';
                 listView.style.display = 'block';
-                renderMemoryList();
             });
 
-            // 🛠️ 画面フリーズを強制解除するためのリフレッシュ関数
-            function refreshCamera() {
-                const video = document.querySelector('video');
-                if (video) {
-                    video.play().catch(e => console.log(e));
-                }
-            }
-
-            // --- ARオブジェクト生成関数 ---
-            function createARElement(tag) {
-                // すでに同IDのエントリがあれば作らない
-                if (document.getElementById(`ar-${tag.id}`)) return;
-
-                const entity = document.createElement('a-entity');
-                entity.setAttribute('id', `ar-${tag.id}`);
-                
-                // 確実にAR.js側に認識させるため、文字列として緯度経度を結合
-                entity.setAttribute('gps-entity-place', `latitude: ${parseFloat(tag.lat)}; longitude: ${parseFloat(tag.lon)};`);
-
-                // ピン（球体）
-                const sphere = document.createElement('a-sphere');
-                sphere.setAttribute('radius', '0.8'); // 少し大きめに変更して視認性UP
-                sphere.setAttribute('color', '#E8A5B3');
-                sphere.setAttribute('opacity', '0.7');
-                sphere.setAttribute('position', '0 1.0 0'); 
-                entity.appendChild(sphere);
-
-                // テキスト看板
-                const text = document.createElement('a-text');
-                text.setAttribute('value', tag.text);
-                text.setAttribute('font', 'https://cdn.jsdelivr.net/gh/etiennepinchon/aframe-fonts@master/fonts/notosanscjkjp/NotoSansCJKjp-Bold.json');
-                text.setAttribute('shader', 'msdf');
-                text.setAttribute('color', '#FFFFFF');
-                text.setAttribute('align', 'center');
-                text.setAttribute('scale', '5 5 5'); // 遠くからでも見えるようサイズアップ
-                text.setAttribute('position', '0 2.5 0');
-                
-                // 🛠️ エラー回避: 外部コンポーネントを使わず、標準の「look-at」または常に正面を向く設定
-                text.setAttribute('look-at', '[gps-camera]');
-                
-                // 背景板
-                text.setAttribute('geometry', 'primitive: plane; height: auto; width: auto; rotate: 0 0 0;');
-                text.setAttribute('material', 'color: #333333; opacity: 0.7; shader: flat');
-                text.setAttribute('z-offset', '0.1'); 
-                
-                entity.appendChild(text);
-
-                // 🛠️ ロスト回避: シーンのロード完了を待ってからアタッチする安全弁
-                if (scene.hasLoaded) {
-                    scene.appendChild(entity);
-                } else {
-                    scene.addEventListener('loaded', () => scene.appendChild(entity));
-                }
-            }
-
-            // 一覧表示
-            function renderMemoryList() {
-                memoryListContainer.innerHTML = '';
-                const savedTags = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-
-                if (savedTags.length === 0) {
-                    memoryListContainer.innerHTML = '<p style="text-align:center; color:#888;">まだ思い出がTag付けされていません。</p>';
-                    return;
-                }
-
-                savedTags.slice().reverse().forEach(tag => {
-                    const card = document.createElement('div');
-                    card.className = 'memory-card';
-                    card.innerHTML = `
-                        <p class="memory-text">${tag.text}</p>
-                        <p class="memory-location">📍 ${tag.lat.toFixed(5)}, ${tag.lon.toFixed(5)}</p>
-                        <button class="delete-btn" data-id="${tag.id}">✕</button>
-                    `;
-                    memoryListContainer.appendChild(card);
-                });
-
-                document.querySelectorAll('.delete-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const idToDelete = parseInt(e.target.getAttribute('data-id'));
-                        if(confirm('この思い出を削除しますか？')) {
-                            deleteMemory(idToDelete);
-                        }
-                    });
-                });
-            }
-
-            function deleteMemory(id) {
-                let savedTags = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-                savedTags = savedTags.filter(tag => tag.id !== id);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(savedTags));
-
-                const arEntity = document.getElementById(`ar-${id}`);
-                if (arEntity) arEntity.parentNode.removeChild(arEntity);
-                renderMemoryList();
-            }
-
-            // 初回読み込み
-            scene.addEventListener('loaded', () => {
-                const savedTags = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-                savedTags.forEach(tag => createARElement(tag));
-            });
-
-            // 「Tagを残す」ボタン処理
+            // 「Tagを残す」を押したときの、デモ用の擬似的な挙動
             saveBtn.addEventListener('click', () => {
                 const textVal = tagInput.value.trim();
                 if (!textVal) return alert('テキストを入力してください。');
 
                 saveBtn.disabled = true;
-                saveBtn.innerText = '取得中...';
+                saveBtn.innerText = '追加中...';
 
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const lat = position.coords.latitude;
-                        const lon = position.coords.longitude;
-                        const newTag = { id: Date.now(), lat: lat, lon: lon, text: textVal };
-                        
-                        const savedTags = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-                        savedTags.push(newTag);
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(savedTags));
+                setTimeout(() => {
+                    // デモ用に、カメラの真ん前（1.5m先）に動的にタグを出現させる
+                    const entity = document.createElement('a-entity');
+                    entity.setAttribute('position', '0 0 -1.5');
 
-                        // 🛠️ 改善: GPS取得直後のカメラフリーズをここで即座に強制解除
-                        refreshCamera();
+                    const sphere = document.createElement('a-sphere');
+                    sphere.setAttribute('radius', '0.3');
+                    sphere.setAttribute('color', '#E8A5B3');
+                    sphere.setAttribute('opacity', '0.7');
+                    entity.appendChild(sphere);
 
-                        // 🛠️ 改善: 少しだけタイミングをずらしてAR空間に配置（初期化バグ防止）
-                        setTimeout(() => {
-                            createARElement(newTag);
-                            saveBtn.disabled = false;
-                            saveBtn.innerText = 'Tagを残す';
-                            tagInput.value = '';
-                            alert('Tag付け完了！少し離れて周囲を見回してください。');
-                        }, 500);
-                    },
-                    (error) => {
-                        saveBtn.disabled = false;
-                        saveBtn.innerText = 'Tagを残す';
-                        alert('GPSエラー: 位置情報を取得できませんでした。');
-                        refreshCamera();
-                    },
-                    { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
-                );
+                    const text = document.createElement('a-text');
+                    text.setAttribute('value', textVal);
+                    text.setAttribute('font', 'https://cdn.jsdelivr.net/gh/etiennepinchon/aframe-fonts@master/fonts/notosanscjkjp/NotoSansCJKjp-Bold.json');
+                    text.setAttribute('shader', 'msdf');
+                    text.setAttribute('color', '#FFFFFF');
+                    text.setAttribute('align', 'center');
+                    text.setAttribute('scale', '1.5 1.5 1.5');
+                    text.setAttribute('position', '0 0.6 0');
+                    text.setAttribute('look-at', '[camera]');
+                    text.setAttribute('geometry', 'primitive: plane; height: auto; width: auto');
+                    text.setAttribute('material', 'color: #333333; opacity: 0.7; shader: flat');
+                    text.setAttribute('z-offset', '0.05');
+                    entity.appendChild(text);
+
+                    scene.appendChild(entity);
+
+                    // 一覧のHTMLにも動的に追加
+                    const container = document.getElementById('memory-list-container');
+                    const card = document.createElement('div');
+                    card.className = 'memory-card';
+                    card.innerHTML = `<p class="memory-text">${textVal}</p><p class="memory-location">📍 41.80110, 140.75620</p>`;
+                    container.insertBefore(card, container.firstChild);
+
+                    // リセット
+                    tagInput.value = '';
+                    saveBtn.disabled = false;
+                    saveBtn.innerText = 'Tagを残す';
+                    alert('今いる場所に思い出を固定しました！（デモモード）');
+                }, 800);
             });
         });
     </script>
