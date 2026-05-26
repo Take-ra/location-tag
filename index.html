@@ -8,7 +8,6 @@
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script type="text/javascript" src="https://raw.githack.com/AR-js-org/AR.js/master/three.js/build/ar-threex-location-only.js"></script>
     <script type="text/javascript" src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    <script src="https://unpkg.com/aframe-look-at-component@0.8.0/dist/aframe-look-at-component.min.js"></script>
 
     <style>
         :root {
@@ -24,19 +23,14 @@
             background-color: #000;
         }
 
-        /* 🔴 バグ修正: iOS/Safariでカメラ上に勝手に出る「再生・停止ボタン」を強制非表示 */
+        /* カメラ映像のフリーズ・再生ボタン対策 */
         video {
-            pointer-events: none !important; /* ビデオへの誤タッチを防ぐ */
+            pointer-events: none !important;
         }
-        video::-webkit-media-controls,
-        video::-webkit-media-controls-play-button,
-        video::-webkit-media-controls-start-playback-button,
-        video::-webkit-media-controls-overlay-play-button {
+        video::-webkit-media-controls {
             display: none !important;
-            -webkit-appearance: none !important;
         }
 
-        /* A-Frameが勝手に出す不要なVR/ARボタンを強制非表示 */
         .a-enter-vr, .a-enter-ar {
             display: none !important;
         }
@@ -61,7 +55,6 @@
             gap: 10px;
             z-index: 1000;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            transition: opacity 0.3s ease;
         }
 
         #tag-input {
@@ -87,7 +80,10 @@
             white-space: nowrap;
         }
 
-        #save-btn:active { transform: scale(0.95); }
+        #save-btn:disabled {
+            background-color: #ccc;
+            box-shadow: none;
+        }
 
         #list-view {
             position: fixed;
@@ -110,7 +106,6 @@
             margin: 20px 0 30px 0;
             font-size: 22px;
             font-weight: bold;
-            letter-spacing: 1px;
         }
 
         .memory-card {
@@ -147,9 +142,6 @@
             width: 30px;
             height: 30px;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
         #bottom-nav {
@@ -174,7 +166,6 @@
             font-size: 12px;
             font-weight: bold;
             cursor: pointer;
-            transition: color 0.2s;
             gap: 4px;
         }
 
@@ -191,7 +182,7 @@
         vr-mode-ui="enabled: false"
         embedded
         arjs="sourceType: webcam; debugUIEnabled: false;">
-        <a-camera gps-camera rotation-reader></a-camera>
+        <a-camera gps-camera="minDistance: 1; maxDistance: 1000;" rotation-reader></a-camera>
     </a-scene>
 
     <div id="ar-input-container" class="glass-panel">
@@ -227,19 +218,14 @@
             const memoryListContainer = document.getElementById('memory-list-container');
             const STORAGE_KEY = 'locationTags';
 
-            // 🔴 バグ修正: 画面タップ時にカメラが停止していれば強制再生する（再生ボタン対策）
-            document.body.addEventListener('click', () => {
-                const video = document.querySelector('video');
-                if (video && video.paused) {
-                    video.play().catch(e => console.log('ビデオ再生エラー:', e));
-                }
-            });
-
+            // 画面切り替え
             navAr.addEventListener('click', () => {
                 navAr.classList.add('active');
                 navList.classList.remove('active');
                 listView.style.display = 'none';
                 arInputContainer.style.display = 'flex';
+                // 切り替え時にカメラ映像の強制再開処理
+                refreshCamera();
             });
 
             navList.addEventListener('click', () => {
@@ -250,39 +236,62 @@
                 renderMemoryList();
             });
 
-            function createARElement(tag) {
-                const entity = document.createElement('a-entity');
-                entity.setAttribute('gps-entity-place', `latitude: ${tag.lat}; longitude: ${tag.lon};`);
-                entity.setAttribute('id', `ar-${tag.id}`);
+            // 🛠️ 画面フリーズを強制解除するためのリフレッシュ関数
+            function refreshCamera() {
+                const video = document.querySelector('video');
+                if (video) {
+                    video.play().catch(e => console.log(e));
+                }
+            }
 
+            // --- ARオブジェクト生成関数 ---
+            function createARElement(tag) {
+                // すでに同IDのエントリがあれば作らない
+                if (document.getElementById(`ar-${tag.id}`)) return;
+
+                const entity = document.createElement('a-entity');
+                entity.setAttribute('id', `ar-${tag.id}`);
+                
+                // 確実にAR.js側に認識させるため、文字列として緯度経度を結合
+                entity.setAttribute('gps-entity-place', `latitude: ${parseFloat(tag.lat)}; longitude: ${parseFloat(tag.lon)};`);
+
+                // ピン（球体）
                 const sphere = document.createElement('a-sphere');
-                sphere.setAttribute('radius', '0.5');
+                sphere.setAttribute('radius', '0.8'); // 少し大きめに変更して視認性UP
                 sphere.setAttribute('color', '#E8A5B3');
                 sphere.setAttribute('opacity', '0.7');
-                sphere.setAttribute('position', '0 1.5 0'); 
+                sphere.setAttribute('position', '0 1.0 0'); 
                 entity.appendChild(sphere);
 
+                // テキスト看板
                 const text = document.createElement('a-text');
                 text.setAttribute('value', tag.text);
-                
-                // 🔴 バグ修正: CDN経由の安定した日本語フォントに変更
                 text.setAttribute('font', 'https://cdn.jsdelivr.net/gh/etiennepinchon/aframe-fonts@master/fonts/notosanscjkjp/NotoSansCJKjp-Bold.json');
                 text.setAttribute('shader', 'msdf');
                 text.setAttribute('color', '#FFFFFF');
                 text.setAttribute('align', 'center');
-                text.setAttribute('scale', '4 4 4'); // 少し大きく調整
+                text.setAttribute('scale', '5 5 5'); // 遠くからでも見えるようサイズアップ
                 text.setAttribute('position', '0 2.5 0');
+                
+                // 🛠️ エラー回避: 外部コンポーネントを使わず、標準の「look-at」または常に正面を向く設定
                 text.setAttribute('look-at', '[gps-camera]');
                 
-                // 🔴 バグ修正: 背景パネル設定。z-offsetで文字を少しだけ手前に出して埋もれを防ぐ
-                text.setAttribute('geometry', 'primitive: plane; height: auto; width: auto');
-                text.setAttribute('material', 'color: #333333; opacity: 0.6; shader: flat');
-                text.setAttribute('z-offset', '0.05'); 
+                // 背景板
+                text.setAttribute('geometry', 'primitive: plane; height: auto; width: auto; rotate: 0 0 0;');
+                text.setAttribute('material', 'color: #333333; opacity: 0.7; shader: flat');
+                text.setAttribute('z-offset', '0.1'); 
                 
                 entity.appendChild(text);
-                scene.appendChild(entity);
+
+                // 🛠️ ロスト回避: シーンのロード完了を待ってからアタッチする安全弁
+                if (scene.hasLoaded) {
+                    scene.appendChild(entity);
+                } else {
+                    scene.addEventListener('loaded', () => scene.appendChild(entity));
+                }
             }
 
+            // 一覧表示
             function renderMemoryList() {
                 memoryListContainer.innerHTML = '';
                 const savedTags = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -292,7 +301,7 @@
                     return;
                 }
 
-                savedTags.reverse().forEach(tag => {
+                savedTags.slice().reverse().forEach(tag => {
                     const card = document.createElement('div');
                     card.className = 'memory-card';
                     card.innerHTML = `
@@ -319,30 +328,20 @@
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(savedTags));
 
                 const arEntity = document.getElementById(`ar-${id}`);
-                if (arEntity) {
-                    arEntity.parentNode.removeChild(arEntity);
-                }
+                if (arEntity) arEntity.parentNode.removeChild(arEntity);
                 renderMemoryList();
             }
 
+            // 初回読み込み
             scene.addEventListener('loaded', () => {
                 const savedTags = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-                savedTags.forEach(tag => {
-                    createARElement(tag);
-                });
+                savedTags.forEach(tag => createARElement(tag));
             });
 
+            // 「Tagを残す」ボタン処理
             saveBtn.addEventListener('click', () => {
                 const textVal = tagInput.value.trim();
-                
-                if (!textVal) {
-                    alert('テキストを入力してください。');
-                    return;
-                }
-                if (!navigator.geolocation) {
-                    alert('ブラウザが位置情報に対応していません。');
-                    return;
-                }
+                if (!textVal) return alert('テキストを入力してください。');
 
                 saveBtn.disabled = true;
                 saveBtn.innerText = '取得中...';
@@ -357,24 +356,25 @@
                         savedTags.push(newTag);
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(savedTags));
 
-                        createARElement(newTag);
+                        // 🛠️ 改善: GPS取得直後のカメラフリーズをここで即座に強制解除
+                        refreshCamera();
 
-                        tagInput.value = '';
-                        saveBtn.disabled = false;
-                        saveBtn.innerText = 'Tagを残す';
-                        
-                        alert('Tag付けしました！\n数歩下がって確認してみてください。');
+                        // 🛠️ 改善: 少しだけタイミングをずらしてAR空間に配置（初期化バグ防止）
+                        setTimeout(() => {
+                            createARElement(newTag);
+                            saveBtn.disabled = false;
+                            saveBtn.innerText = 'Tagを残す';
+                            tagInput.value = '';
+                            alert('Tag付け完了！少し離れて周囲を見回してください。');
+                        }, 500);
                     },
                     (error) => {
                         saveBtn.disabled = false;
                         saveBtn.innerText = 'Tagを残す';
-                        if (error.code === error.PERMISSION_DENIED) {
-                            alert('【エラー】GPS権限を許可してください。');
-                        } else {
-                            alert('【エラー】位置情報が取得できませんでした。');
-                        }
+                        alert('GPSエラー: 位置情報を取得できませんでした。');
+                        refreshCamera();
                     },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
                 );
             });
         });
