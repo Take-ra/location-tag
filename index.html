@@ -22,6 +22,26 @@
             background-color: #000;
         }
 
+        /* 🛠️ 100%確実にカメラ映像を背景に全画面表示するためのスタイル */
+        #webcam-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: -2; /* 3D空間やUIの後ろに配置 */
+        }
+
+        /* A-Frameのキャンバス背景を透明にしてカメラを透けさせる */
+        .a-canvas {
+            background-color: transparent !important;
+        }
+
+        .a-enter-vr, .a-enter-ar {
+            display: none !important;
+        }
+
         .glass-panel {
             background: var(--bg-glass);
             backdrop-filter: blur(15px);
@@ -149,9 +169,11 @@
 </head>
 <body>
 
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: false">
+    <video id="webcam-video" autoplay playsinline muted></video>
+
+    <a-scene embedded vr-mode-ui="enabled: false">
         
-        <a-entity position="-1.5 0.5 -3">
+        <a-entity position="-1.5 0.3 -3">
             <a-sphere radius="0.4" color="#E8A5B3" opacity="0.7"></a-sphere>
             <a-text value="初めてのオーストラリア留学！" 
                     font="https://cdn.jsdelivr.net/gh/etiennepinchon/aframe-fonts@master/fonts/notosanscjkjp/NotoSansCJKjp-Bold.json"
@@ -159,7 +181,7 @@
                     geometry="primitive: plane; height: auto; width: auto" material="color: #333333; opacity: 0.7; shader: flat" z-offset="0.05"></a-text>
         </a-entity>
 
-        <a-entity position="0 0 -2">
+        <a-entity position="0 -0.2 -2">
             <a-sphere radius="0.4" color="#E8A5B3" opacity="0.7"></a-sphere>
             <a-text value="ここで友達と遅くまで語り合った場所" 
                     font="https://cdn.jsdelivr.net/gh/etiennepinchon/aframe-fonts@master/fonts/notosanscjkjp/NotoSansCJKjp-Bold.json"
@@ -167,7 +189,7 @@
                     geometry="primitive: plane; height: auto; width: auto" material="color: #333333; opacity: 0.7; shader: flat" z-offset="0.05"></a-text>
         </a-entity>
 
-        <a-entity position="2 0.8 -4">
+        <a-entity position="2 0.6 -4">
             <a-sphere radius="0.4" color="#E8A5B3" opacity="0.7"></a-sphere>
             <a-text value="大会で優勝した思い出のコート！" 
                     font="https://cdn.jsdelivr.net/gh/etiennepinchon/aframe-fonts@master/fonts/notosanscjkjp/NotoSansCJKjp-Bold.json"
@@ -175,7 +197,7 @@
                     geometry="primitive: plane; height: auto; width: auto" material="color: #333333; opacity: 0.7; shader: flat" z-offset="0.05"></a-text>
         </a-entity>
 
-        <a-camera id="camera" rotation-reader></a-camera>
+        <a-camera id="camera" wasd-controls-enabled="false" look-controls-enabled="true"></a-camera>
     </a-scene>
 
     <div id="ar-input-container" class="glass-panel">
@@ -221,6 +243,25 @@
             const arInputContainer = document.getElementById('ar-input-container');
             const listView = document.getElementById('list-view');
             const scene = document.querySelector('a-scene');
+            const video = document.getElementById('webcam-video');
+
+            // 🛠️ 確実に背面カメラを起動するJavaScriptの標準ロジック
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                const constraints = {
+                    video: { facingMode: 'environment' }, // 背面カメラを指定
+                    audio: false
+                };
+                navigator.mediaDevices.getUserMedia(constraints)
+                    .then((stream) => {
+                        video.srcObject = stream;
+                    })
+                    .catch((err) => {
+                        alert('カメラの起動に失敗しました。ブラウザの設定でカメラ利用を許可してください。');
+                        console.error(err);
+                    });
+            } else {
+                alert('お使いのブラウザはカメラ機能に対応していません。');
+            }
 
             // タブ切り替え
             navAr.addEventListener('click', () => {
@@ -246,7 +287,7 @@
                 saveBtn.innerText = '追加中...';
 
                 setTimeout(() => {
-                    // デモ用に、カメラの真ん前（1.5m先）に動的にタグを出現させる
+                    // カメラの真ん前（1.5m先）に動的にタグを出現させる
                     const entity = document.createElement('a-entity');
                     entity.setAttribute('position', '0 0 -1.5');
 
@@ -279,12 +320,11 @@
                     card.innerHTML = `<p class="memory-text">${textVal}</p><p class="memory-location">📍 41.80110, 140.75620</p>`;
                     container.insertBefore(card, container.firstChild);
 
-                    // リセット
                     tagInput.value = '';
                     saveBtn.disabled = false;
                     saveBtn.innerText = 'Tagを残す';
                     alert('今いる場所に思い出を固定しました！（デモモード）');
-                }, 800);
+                }, 500);
             });
         });
     </script>
